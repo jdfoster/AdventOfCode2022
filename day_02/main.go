@@ -8,105 +8,70 @@ import (
 
 var fn = "./day_02/input.txt"
 
-type Shape string
+type Shape int
+type Condition int
 
 const (
-	Rock    Shape = "rock"
-	Paper   Shape = "paper"
-	Sissors Shape = "sissors"
+	Rock    Shape     = 1
+	Paper   Shape     = 2
+	Sissors Shape     = 3
+	Lose    Condition = 0
+	Draw    Condition = 3
+	Win     Condition = 6
 )
 
-func (s Shape) Score(v Shape) (res int) {
-	if s == Rock {
-		res = 1
-
-		switch v {
-		case Sissors:
-			res += 6
-		case Paper:
-			res += 0
-		default:
-			res += 3
-		}
-	}
-
-	if s == Paper {
-		res = 2
-
-		switch v {
-		case Rock:
-			res += 6
-		case Sissors:
-			res += 0
-		default:
-			res += 3
-		}
-	}
-
-	if s == Sissors {
-		res = 3
-
-		switch v {
-		case Paper:
-			res += 6
-		case Rock:
-			res += 0
-		default:
-			res += 3
-		}
-	}
-
-	return
+type Match struct {
+	Opponent Shape
+	Played   Shape
+	Result   Condition
 }
 
-type Round struct {
-	Owner      Shape
-	Challenger Shape
+func (m Match) Sum() int {
+	return int(m.Played) + int(m.Result)
 }
 
-func (r Round) Score() int {
-	return r.Owner.Score(r.Challenger)
+type Row struct {
+	First  Match
+	Second Match
 }
 
-func oConv(v rune) (res Shape, ok bool) {
-	switch v {
-	case 'A':
-		res, ok = Rock, true
-	case 'B':
-		res, ok = Paper, true
-	case 'C':
-		res, ok = Sissors, true
-	}
-
-	return
-}
-
-func cConv(v rune) (res Shape, ok bool) {
-	switch v {
-	case 'X':
-		res, ok = Rock, true
-	case 'Y':
-		res, ok = Paper, true
-	case 'Z':
-		res, ok = Sissors, true
-	}
-
-	return
-}
-
-func NewRound(line string) (res Round, ok bool) {
-	r := []rune(line)
-	if len(r) != 3 {
-		return
-	}
-
-	res.Challenger, ok = oConv(r[0])
-	if !ok {
-		return
-	}
-
-	res.Owner, ok = cConv(r[2])
-	return
+var Lookup = map[string]Row{
+	"A X": {
+		First:  Match{Opponent: Rock, Played: Rock, Result: Draw},
+		Second: Match{Opponent: Rock, Played: Sissors, Result: Lose},
+	},
+	"A Y": {
+		First:  Match{Opponent: Rock, Played: Paper, Result: Win},
+		Second: Match{Opponent: Rock, Played: Rock, Result: Draw},
+	},
+	"A Z": {
+		First:  Match{Opponent: Rock, Played: Sissors, Result: Lose},
+		Second: Match{Opponent: Rock, Played: Paper, Result: Win},
+	},
+	"B X": {
+		First:  Match{Opponent: Paper, Played: Rock, Result: Lose},
+		Second: Match{Opponent: Paper, Played: Rock, Result: Lose},
+	},
+	"B Y": {
+		First:  Match{Opponent: Paper, Played: Paper, Result: Draw},
+		Second: Match{Opponent: Paper, Played: Paper, Result: Draw},
+	},
+	"B Z": {
+		First:  Match{Opponent: Paper, Played: Sissors, Result: Win},
+		Second: Match{Opponent: Paper, Played: Sissors, Result: Win},
+	},
+	"C X": {
+		First:  Match{Opponent: Sissors, Played: Rock, Result: Win},
+		Second: Match{Opponent: Sissors, Played: Paper, Result: Lose},
+	},
+	"C Y": {
+		First:  Match{Opponent: Sissors, Played: Paper, Result: Lose},
+		Second: Match{Opponent: Sissors, Played: Sissors, Result: Draw},
+	},
+	"C Z": {
+		First:  Match{Opponent: Sissors, Played: Sissors, Result: Draw},
+		Second: Match{Opponent: Sissors, Played: Rock, Result: Win},
+	},
 }
 
 func main() {
@@ -118,16 +83,21 @@ func main() {
 	defer f.Close()
 
 	s := bufio.NewScanner(f)
-	var sum int
+	var (
+		first  int
+		second int
+	)
 
 	for s.Scan() {
-		r, ok := NewRound(s.Text())
+		r, ok := Lookup[s.Text()]
 		if !ok {
-			panic("could not parse round")
+			panic("unmatched row")
 		}
 
-		sum += r.Score()
+		first += r.First.Sum()
+		second += r.Second.Sum()
 	}
 
-	fmt.Println("part one value: ", sum)
+	fmt.Println("part one value: ", first)
+	fmt.Println("part two value: ", second)
 }
