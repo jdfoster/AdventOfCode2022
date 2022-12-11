@@ -6,38 +6,53 @@ import (
 )
 
 func TestMain(t *testing.T) {
+	cases := []struct {
+		input  string
+		first  int
+		second int
+	}{
+		{
+			input:  "mjqjpqmgbljsphdztnvjfqwrcgsmlb",
+			first:  7,
+			second: 19,
+		},
+		{
+			input:  "bvwbjplbgvbhsrlpgdmjqwftvncz",
+			first:  5,
+			second: 23,
+		},
+		{
+			input:  "nppdvjthqldpwncqszvftbrmjlhg",
+			first:  6,
+			second: 23,
+		},
+		{
+			input:  "nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg",
+			first:  10,
+			second: 29,
+		},
+		{
+			input:  "zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw",
+			first:  11,
+			second: 26,
+		},
+	}
 
 	t.Run("day 6 part A", func(t *testing.T) {
-		cases := []struct {
-			input string
-			want  int
-		}{
-			{
-				input: "mjqjpqmgbljsphdztnvjfqwrcgsmlb",
-				want:  7,
-			},
-				{
-					input: "bvwbjplbgvbhsrlpgdmjqwftvncz",
-					want:  5,
-				},
-				{
-					input: "nppdvjthqldpwncqszvftbrmjlhg",
-					want:  6,
-				},
-				{
-					input: "nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg",
-					want:  10,
-				},
-				{
-					input: "zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw",
-					want:  11,
-				},
-		}
-
 		for i, c := range cases {
 			t.Run(fmt.Sprintf("test case %d", i), func(t *testing.T) {
-				if got := findPacket([]byte(c.input)); got != c.want {
-					t.Errorf("got %d, want %d", got, c.want)
+				if got, want := findPacket(packetStartSize, []byte(c.input)), c.first; got != want {
+					t.Errorf("got %d, want %d", got, want)
+				}
+			})
+		}
+	})
+
+	t.Run("day 6 part B", func(t *testing.T) {
+		for i, c := range cases {
+			t.Run(fmt.Sprintf("test case %d", i), func(t *testing.T) {
+				if got, want := findPacket(messageStartSize, []byte(c.input)), c.second; got != want {
+					t.Errorf("got %d, want %d", got, want)
 				}
 			})
 		}
