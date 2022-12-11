@@ -67,6 +67,21 @@ func (g Grid) Move(c, x, y int) {
 	}
 }
 
+func (g Grid) Slice(c, x, y int) {
+	a := g.stacks[x-1]
+	b := g.stacks[y-1]
+
+	i := make([]rune, len(a.stack) - c)
+	j := make([]rune, len(b.stack) + c)
+
+	copy(j, a.stack[:c])
+	copy(j[c:], b.stack)
+	copy(i, a.stack[c:])
+
+	a.stack = i
+	b.stack = j
+}
+
 func NewGrid() *Grid {
 	stacks := make([]*Stack, 9)
 
@@ -91,7 +106,7 @@ func parseGridLine(g *Grid, l string) {
 
 var re = regexp.MustCompile(`\d+`)
 
-func parseMoveLine(g *Grid, l string) {
+func parseMoveLine(l string) []int {
 	r := re.FindAll([]byte(l), -1)
 	if len(r) != 3 {
 		panic("unexpected count")
@@ -106,7 +121,7 @@ func parseMoveLine(g *Grid, l string) {
 		n[i] = int(j)
 	}
 
-	g.Move(n[0], n[1], n[2])
+	return n
 }
 
 func main() {
@@ -118,22 +133,26 @@ func main() {
 	defer f.Close()
 
 	s := bufio.NewScanner(f)
-	grid := NewGrid()
+	first := NewGrid()
+	second := NewGrid()
 
 	for s.Scan() {
 		line := s.Text()
 
 		switch len(line) {
 		case 35:
-			parseGridLine(grid, line)
+			parseGridLine(first, line)
+			parseGridLine(second, line)
 		case 0, 1:
 			// break
 		default:
-			parseMoveLine(grid, line)
-
+			m := parseMoveLine(line)
+			first.Move(m[0], m[1], m[2])
+			second.Slice(m[0], m[1], m[2])
 		}
 
 	}
 
-	fmt.Println(grid.Head())
+	fmt.Println("part one value", first.Head())
+	fmt.Println("part one value", second.Head())
 }
