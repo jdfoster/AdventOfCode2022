@@ -7,7 +7,10 @@ import (
 
 var fn = "./day_06/input.txt"
 
-const packetSize = 4
+const (
+	packetStartSize = 4
+	messageStartSize = 14
+)
 
 func toByteSet(bb []byte) map[byte]struct{} {
 	res := make(map[byte]struct{})
@@ -19,12 +22,12 @@ func toByteSet(bb []byte) map[byte]struct{} {
 	return res
 }
 
-func findPacket(b []byte) int {
-	for j := packetSize; j < len(b); j++ {
-		i := j - packetSize
+func findPacket(l int, b []byte) int {
+	for j := l; j < len(b); j++ {
+		i := j - l
 		s := toByteSet(b[i:j])
 
-		if len(s) == packetSize {
+		if len(s) == l {
 			return j
 		}
 	}
@@ -38,6 +41,8 @@ func main() {
 		panic(err)
 	}
 
-	first := findPacket(b)
+	first := findPacket(packetStartSize, b)
+	second := findPacket(messageStartSize, b)
 	fmt.Println("part one value: ", first)
+	fmt.Println("part two value: ", second)
 }
