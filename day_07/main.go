@@ -91,7 +91,7 @@ func main() {
 	root := NewDirectory(nil)
 	var cur *Directory
 
-	m := regexp.MustCompile(`^(\d+) (\w+\.\w+)`)
+	m := regexp.MustCompile(`^(\d+) (.*)`)
 
 	for s.Scan() {
 		line := s.Text()
@@ -138,6 +138,8 @@ func main() {
 			}
 
 			(*cur).Files[f] = int(ss)
+		default:
+			panic(fmt.Sprintf("unmatched line: %s", line))
 		}
 	}
 
