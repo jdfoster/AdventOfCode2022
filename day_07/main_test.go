@@ -54,7 +54,7 @@ func TestMain(t *testing.T) {
 
 		for i, c := range cases {
 			t.Run(fmt.Sprintf("test case %d", i), func(t *testing.T) {
-				if got := Sum(*c.input); got != c.want {
+				if got := Sum(c.input); got != c.want {
 					t.Errorf("got %d, want %d", got, c.want)
 				}
 			})
@@ -64,7 +64,7 @@ func TestMain(t *testing.T) {
 	t.Run("day 6 part A", func(t *testing.T) {
 		want := 95437
 
-		if got := Walk(*root, 100_000); got != want {
+		if got, _ := Walk(root, 100_000); got != want {
 			t.Errorf("got %d, want %d", got, want)
 		}
 	})

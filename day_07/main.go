@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -31,10 +32,10 @@ func NewDirectory(p *Directory) *Directory {
 	}
 }
 
-func Sum(dir Directory) int {
-	var f func(Directory) int
+func Sum(dir *Directory) int {
+	var f func(*Directory) int
 
-	f = func(d Directory) int {
+	f = func(d *Directory) int {
 		var acc int
 
 		for _, f := range d.Files {
@@ -46,7 +47,7 @@ func Sum(dir Directory) int {
 				continue
 			}
 
-			acc += f(*d)
+			acc += f(d)
 		}
 
 		return acc
@@ -55,20 +56,23 @@ func Sum(dir Directory) int {
 	return f(dir)
 }
 
-func Walk(dir Directory, cutoff int) int {
+func Walk(dir *Directory, cutoff int) (int, Directories) {
 	var (
-		walk  func(Directory)
+		walk  func(*Directory)
 		total int
+		dirs  []*Directory
 	)
 
-	walk = func(d Directory) {
+	walk = func(d *Directory) {
 		for _, d := range d.Dirs {
 			if d == nil {
 				continue
 			}
-			walk(*d)
+			walk(d)
 
-			if v := Sum(*d); v <= cutoff {
+			dirs = append(dirs, d)
+
+			if v := Sum(d); v <= cutoff {
 				total += v
 			}
 		}
@@ -76,7 +80,21 @@ func Walk(dir Directory, cutoff int) int {
 
 	walk(dir)
 
-	return total
+	return total, dirs
+}
+
+type Directories []*Directory
+
+func (dd Directories) Len() int {
+	return len(dd)
+}
+
+func (dd Directories) Swap(i, j int) {
+	dd[i], dd[j] = dd[j], dd[i]
+}
+
+func (dd Directories) Less(i, j int) bool {
+	return Sum(dd[i]) < Sum(dd[j])
 }
 
 func main() {
@@ -143,10 +161,17 @@ func main() {
 		}
 	}
 
-	var first int
-	for _, d := range root.Dirs {
-		first += Walk(*d, 100_000)
-	}
-
+	first, dirs := Walk(root, 100_000)
 	fmt.Println("part one value: ", first)
+
+	sort.Sort(dirs)
+	free := 70000000 - Sum(root)
+	target := 30000000 - free
+
+	for _, d := range dirs {
+		if v := Sum(d); v >= target {
+			fmt.Println("part two value: ", v)
+			break
+		}
+	}
 }
