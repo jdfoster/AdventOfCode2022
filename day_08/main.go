@@ -80,6 +80,39 @@ func (tt Trees) Visible() TreeSet {
 	return set
 }
 
+func (tt Trees) Scores(i int) (int, int) {
+	l := len(tt) - 1
+
+	if i < 1 || i >= l {
+		return 0, 0
+	}
+
+	s := tt[i]
+	left, right := 1, 1
+
+	for left < i {
+		j := i - left
+
+		if tt[j].H >= s.H {
+			break
+		}
+
+		left++
+	}
+
+	for right < l-i {
+		j := i + right
+
+		if tt[j].H >= s.H {
+			break
+		}
+
+		right++
+	}
+
+	return left, right
+}
+
 type Grid struct {
 	rows []Trees
 }
@@ -103,6 +136,32 @@ func (g Grid) Visible() TreeSet {
 	}
 
 	return set
+}
+
+func (g Grid) Scores(x, y int) (left int, right int, up int, down int) {
+	left, right = g.rows[x].Scores(y)
+	up, down = g.Column(y).Scores(x)
+	return
+}
+
+func (g Grid) Scenic(x, y int) int {
+	l, r, u, d := g.Scores(x, y)
+	return l * r * u * d
+}
+
+func (g Grid) MaxSenic() int {
+	var max = -1
+
+	for x, row := range g.rows {
+		for y := range row {
+			s := g.Scenic(x, y)
+			if s > max {
+				max = s
+			}
+		}
+	}
+
+	return max
 }
 
 func Scan(r io.Reader) Grid {
@@ -138,6 +197,9 @@ func main() {
 		panic(err)
 	}
 
+	defer f.Close()
+
 	grid := Scan(f)
 	fmt.Println("part one value: ", grid.Visible().Count())
+	fmt.Println("part two value: ", grid.MaxSenic())
 }

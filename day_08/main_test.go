@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -77,6 +78,57 @@ func TestMain(t *testing.T) {
 		set := grid.Visible()
 
 		if got, want := set.Count(), 21; got != want {
+			t.Errorf("got %d, want %d", got, want)
+		}
+	})
+
+	t.Run("Calculate scenic score", func(t *testing.T) {
+		r := strings.NewReader(input)
+		grid := Scan(r)
+
+		cases := []struct {
+			X      int
+			Y      int
+			Left   int
+			Right  int
+			Up     int
+			Down   int
+			Scenic int
+		}{
+			{X: 0, Y: 0, Left: 0, Right: 0, Up: 0, Down: 0, Scenic: 0},
+			{X: 1, Y: 2, Left: 1, Right: 2, Up: 1, Down: 2, Scenic: 4},
+			{X: 3, Y: 2, Left: 2, Right: 2, Up: 2, Down: 1, Scenic: 8},
+		}
+
+		for i, c := range cases {
+			t.Run(fmt.Sprintf("case %d, director counts", i), func(t *testing.T) {
+				l, r, u, d := grid.Scores(c.X, c.Y)
+				if got, want := l, c.Left; got != want {
+					t.Errorf("left; got %d, want %d", got, want)
+				}
+				if got, want := r, c.Right; got != want {
+					t.Errorf("right; got %d, want %d", got, want)
+				}
+				if got, want := u, c.Up; got != want {
+					t.Errorf("up; got %d, want %d", got, want)
+				}
+				if got, want := d, c.Down; got != want {
+					t.Errorf("down; got %d, want %d", got, want)
+				}
+			})
+
+			t.Run(fmt.Sprintf("case %d, scenic score", i), func(t *testing.T) {
+				if got, want := grid.Scenic(c.X, c.Y), c.Scenic; got != want {
+					t.Errorf("got %d, want %d", got, want)
+				}
+			})
+		}
+	})
+
+	t.Run("Finds maximum scenic score", func(t *testing.T) {
+		r := strings.NewReader(input)
+		grid := Scan(r)
+		if got, want := grid.MaxSenic(), 8; got != want {
 			t.Errorf("got %d, want %d", got, want)
 		}
 	})
