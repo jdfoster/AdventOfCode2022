@@ -56,6 +56,25 @@ func TestMain(t *testing.T) {
 			t.Errorf("got %d, want %d", got, want)
 		}
 	})
+
+	t.Run("Render output", func(t *testing.T) {
+		r := strings.NewReader(input)
+		items := Scan(r)
+		mach := NewMachine()
+		proc := NewProc()
+		proc.Run(mach, items)
+
+		got := strings.TrimSpace(proc.crt.Render())
+		want := strings.TrimSpace(output)
+
+		if got != want {
+			t.Error("failed to draw outout")
+			fmt.Println("got >>>")
+			fmt.Println(got)
+			fmt.Println("want >>>")
+			fmt.Println(want)
+		}
+	})
 }
 
 var input = `addx 15
@@ -204,3 +223,10 @@ addx -11
 noop
 noop
 noop`
+
+var output = `##..##..##..##..##..##..##..##..##..##..
+###...###...###...###...###...###...###.
+####....####....####....####....####....
+#####.....#####.....#####.....#####.....
+######......######......######......####
+#######.......#######.......#######.....`

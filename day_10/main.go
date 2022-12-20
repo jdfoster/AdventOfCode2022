@@ -58,6 +58,7 @@ func NewMachine() *Machine {
 type Proc struct {
 	bps   []int
 	state map[int]Register
+	crt   CRT
 }
 
 func (p Proc) Strength() int {
@@ -78,6 +79,8 @@ func (p *Proc) Tick(cycle int, memory Register) {
 
 		p.state[cycle] = memory
 	}
+
+	p.crt.Draw(cycle, memory)
 }
 
 func (p *Proc) Run(mach *Machine, items []Instruction) {
@@ -90,7 +93,47 @@ func NewProc() *Proc {
 	return &Proc{
 		bps:   []int{20, 60, 100, 140, 180, 220},
 		state: make(map[int]Register),
+		crt:   NewCRT(),
 	}
+}
+
+type CRT [][]rune
+
+func (c CRT) Draw(cycle int, mem Register) {
+	x := (cycle - 1) / 40
+	y := (cycle - 1) % 40
+
+	left, right := mem.x-1, mem.x+1
+	var r rune = '.'
+	if y >= left && y <= right {
+		r = '#'
+	}
+
+	c[x][y] = r
+}
+
+func (c CRT) Render() string {
+	b := strings.Builder{}
+
+	for _, pp := range c {
+		for _, p := range pp {
+			b.WriteRune(p)
+		}
+
+		b.WriteRune('\n')
+	}
+
+	return b.String()
+}
+
+func NewCRT() CRT {
+	crt := make(CRT, 6)
+
+	for i := 0; i < 6; i++ {
+		crt[i] = make([]rune, 40)
+	}
+
+	return crt
 }
 
 func Scan(r io.Reader) []Instruction {
@@ -126,10 +169,14 @@ func main() {
 		panic(err)
 	}
 
+	defer f.Close()
+
 	items := Scan(f)
 	mach := NewMachine()
 	proc := NewProc()
 	proc.Run(mach, items)
 
 	fmt.Println("part 1 value: ", proc.Strength())
+	fmt.Println("part 2 value:")
+	fmt.Println(proc.crt.Render())
 }
