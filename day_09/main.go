@@ -31,24 +31,24 @@ func (p Position) Diff(o Position) Position {
 	}
 }
 
-type Ending struct {
+type Knot struct {
 	pos  Position
 	seen map[Position]struct{}
 }
 
-func (e Ending) Count() int {
-	return len(e.seen)
+func (k Knot) Count() int {
+	return len(k.seen)
 }
 
-func (e *Ending) Move(x, y int) {
-	e.pos = e.pos.Add(x, y)
-	e.seen[e.pos] = struct{}{}
+func (k *Knot) Move(x, y int) {
+	k.pos = k.pos.Add(x, y)
+	k.seen[k.pos] = struct{}{}
 }
 
-func NewEnding() *Ending {
+func NewKnot() *Knot {
 	p := Position{X: 0, Y: 0}
 
-	return &Ending{
+	return &Knot{
 		pos:  p,
 		seen: map[Position]struct{}{p: {}},
 	}
@@ -75,8 +75,11 @@ func absInt(i int) int {
 }
 
 type Rope struct {
-	Head *Ending
-	Tail *Ending
+	knots []*Knot
+}
+
+func (r *Rope) Tail() *Knot {
+	return r.knots[len(r.knots)-1]
 }
 
 func (r *Rope) Move(x, y int) {
@@ -85,10 +88,17 @@ func (r *Rope) Move(x, y int) {
 		panic(err)
 	}
 
-	r.Head.Move(x, y)
-	d := r.Head.pos.Diff(r.Tail.pos)
-	if absInt(d.X) > 1 || absInt(d.Y) > 1 {
-		r.Tail.Move(signInt(d.X), signInt(d.Y))
+	for i, k := range r.knots {
+		if i == 0 {
+			k.Move(x, y)
+			continue
+		}
+
+		d := r.knots[i-1].pos.Diff(k.pos)
+
+		if absInt(d.X) > 1 || absInt(d.Y) > 1 {
+			k.Move(signInt(d.X), signInt(d.Y))
+		}
 	}
 }
 
@@ -120,16 +130,18 @@ func (r *Rope) Down(i int) {
 	}
 }
 
-func NewRope() *Rope {
-	return &Rope{
-		Head: NewEnding(),
-		Tail: NewEnding(),
+func NewRope(i int) *Rope {
+	rope := &Rope{}
+	rope.knots = make([]*Knot, i)
+
+	for i := range rope.knots {
+		rope.knots[i] = NewKnot()
 	}
+
+	return rope
 }
 
-func Scan(r io.Reader) *Rope {
-	rope := NewRope()
-
+func Scan(r io.Reader, rope *Rope) {
 	s := bufio.NewScanner(r)
 	for s.Scan() {
 		line := s.Text()
@@ -156,8 +168,6 @@ func Scan(r io.Reader) *Rope {
 			panic("unknown direction")
 		}
 	}
-
-	return rope
 }
 
 func main() {
@@ -168,6 +178,13 @@ func main() {
 
 	defer f.Close()
 
-	rope := Scan(f)
-	fmt.Println("part 1 value: ", rope.Tail.Count())
+	short := NewRope(2)
+	Scan(f, short)
+	fmt.Println("part 1 value: ", short.Tail().Count())
+
+
+	f.Seek(0, io.SeekStart)
+	long := NewRope(10)
+	Scan(f, long)
+	fmt.Println("part 2 value: ", long.Tail().Count())
 }
