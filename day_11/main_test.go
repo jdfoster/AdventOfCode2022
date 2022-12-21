@@ -49,7 +49,7 @@ func TestMain(t *testing.T) {
 
 			for i, tc := range cases {
 				t.Run(fmt.Sprintf("case %d", i), func(t *testing.T) {
-					ValidateMonkey(t, barrel[i], tc)
+					validateMonkey(t, barrel[i], tc)
 				})
 			}
 		})
@@ -63,22 +63,77 @@ func TestMain(t *testing.T) {
 			}
 		})
 
-		t.Run("should iterate a round", func(t *testing.T) {
+		t.Run("should iterate a round for 20 iterations", func(t *testing.T) {
 			r := strings.NewReader(input)
 			barrel := Scan(r)
 
 			for i := 0; i < 20; i++ {
-				barrel.Round()
+				barrel.Round(3)
 			}
 
 			if got, want := barrel.Business(), 10605; got != want {
 				t.Fatalf("got %d, want %d", got, want)
 			}
 		})
+
+		t.Run("should iterate a round for 1000 iterations", func(t *testing.T) {
+			r := strings.NewReader(input)
+			barrel := Scan(r)
+
+			count := 0
+
+			runTo := func(limit int, counts []int) {
+				if count > limit {
+					t.Fatal("counter has passed limit")
+				}
+
+				for count < limit {
+					barrel.Round(1)
+					count++
+				}
+
+				t.Logf("Round %d\n", count)
+				validateCounts(t, barrel, counts)
+			}
+
+			runTo(1, []int{2, 4, 3, 6})
+			runTo(20, []int{99, 97, 8, 103})
+			runTo(1000, []int{5204, 4792, 199, 5192})
+			runTo(2000, []int{10419, 9577, 392, 10391})
+			runTo(3000, []int{15638, 14358, 587, 15593})
+			runTo(4000, []int{20858, 19138, 780, 20797})
+			runTo(5000, []int{26075, 23921, 974, 26000})
+			runTo(6000, []int{31294, 28702, 1165, 31204})
+			runTo(7000, []int{36508, 33488, 1360, 36400})
+			runTo(8000, []int{41728, 38268, 1553, 41606})
+			runTo(9000, []int{46945, 43051, 1746, 46807})
+			runTo(10000, []int{52166, 47830, 1938, 52013})
+
+			if got, want := barrel.Business(), 2713310158; got != want {
+				t.Fatalf("got %d, want %d", got, want)
+			}
+		})
 	})
 }
 
-func ValidateMonkey(t *testing.T, mky *Monkey, tc Monkey) {
+func validateCounts(t *testing.T, b Barrel, counts []int) {
+	t.Helper()
+
+	if got, want := len(b), len(counts); got != want {
+		t.Fatalf("got %d, want %d", got, want)
+	}
+
+	for i, want := range counts {
+		mky := b[i]
+		if got := mky.count; got != want {
+			t.Fatalf("monkey %d; got %d, want %d", i, got, want)
+		}
+	}
+}
+
+func validateMonkey(t *testing.T, mky *Monkey, tc Monkey) {
+	t.Helper()
+
 	if got, want := len(mky.items), len(tc.items); got != want {
 		t.Errorf("got %d, want %d", got, want)
 	}
