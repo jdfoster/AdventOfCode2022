@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -35,30 +36,61 @@ type Monkey struct {
 	count int
 }
 
-func buildAdd(v int) Operation {
-	return func(i int) int {
-		return v + i
+func buildAdd(a int) Operation {
+	return func(b int) int {
+		if a > math.MaxInt-b {
+			panic(fmt.Sprintf("add %d, %d ; int overflow", a, b))
+		}
+		return a + b
 	}
 }
 
-func buildMulti(v int) Operation {
-	return func(i int) int {
-		return v * i
+func buildMulti(a int) Operation {
+	return func(b int) int {
+		if a == 0 || b == 0 {
+			return 0
+		}
+
+		result := a * b
+		if a == 1 || b == 1 {
+			return result
+		}
+
+		if a == math.MinInt || b == math.MinInt {
+			panic(fmt.Sprintf("multiply %d, %d ; int overflow", a, b))
+		}
+
+		if result/b != a {
+			panic(fmt.Sprintf("multiply %d, %d ; int overflow", a, b))
+		}
+
+		return result
 	}
 }
 
 func buildSquare() Operation {
 	return func(i int) int {
-		return i * i
+		return buildMulti(i)(i)
 	}
 }
 
 type Barrel []*Monkey
 
-func (b Barrel) Round() {
+func (b Barrel) Round(d int) {
+	var supermod int = 1
+
+	// Inspection calculation with the operation function overflows for part b
+	// using signed integers (int), to avoid this we must reduce the value by
+	// dividing by the product of all the denominators.
+
+	for _, mky := range b {
+		supermod *= mky.div
+	}
+
 	for _, mky := range b {
 		for _, item := range mky.items {
-			v := mky.op(item) / 3
+
+			v := mky.op(item%supermod) / d
 			if v%mky.div == 0 {
 				b[mky.pass].items = append(b[mky.pass].items, v)
 			} else {
@@ -193,11 +225,23 @@ func main() {
 		panic(err)
 	}
 
+	defer f.Close()
+
 	barrel := Scan(f)
 
 	for i := 0; i < 20; i++ {
-		barrel.Round()
+		barrel.Round(3)
+
 	}
 
 	fmt.Println("part 1 value: ", barrel.Business())
+
+	f.Seek(0, io.SeekStart)
+	barrel = Scan(f)
+
+	for i := 0; i < 10000; i++ {
+		barrel.Round(1)
+	}
+
+	fmt.Println("part 2 value: ", barrel.Business())
 }
