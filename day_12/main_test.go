@@ -51,25 +51,15 @@ func TestMain(t *testing.T) {
 		}
 	})
 
-	t.Run("calculates paths", func(t *testing.T) {
+	t.Run("calculate shortest path", func(t *testing.T) {
 		r := strings.NewReader(input)
 		grid, start, end := Scan(r)
-		res := Walk(grid, start, end)
-
-		if got, want := len(res), 12; got != want {
-			t.Errorf("got %d, want %d", got, want)
-		}
-	})
-
-	t.Run("calculates shortest path", func(t *testing.T) {
-		r := strings.NewReader(input)
-		grid, start, end := Scan(r)
-		got, ok := Shortest(grid, start, end)
+		res, ok := Walk(grid, start, end)
 		if !ok {
-			t.Fatal("failed to find any paths")
+			t.Fatal("failed to find path to goal")
 		}
 
-		if want := 31; got != want {
+		if got, want := res.Count, 31; got != want {
 			t.Errorf("got %d, want %d", got, want)
 		}
 	})

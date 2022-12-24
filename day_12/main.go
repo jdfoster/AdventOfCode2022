@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sort"
+	"strings"
 )
 
 var fn = "./day_12/input.txt"
@@ -20,6 +20,19 @@ func (p Position) Equal(o Position) bool {
 }
 
 type Grid [][]int
+
+func (g Grid) String() string {
+	b := strings.Builder{}
+
+	for _, r := range g {
+		for _, c := range r {
+			b.WriteRune(toRune(c))
+		}
+		b.WriteRune('\n')
+	}
+
+	return b.String()
+}
 
 func (g Grid) Height(p Position) (int, bool) {
 	if p.X < 0 || p.Y < 0 {
@@ -57,7 +70,7 @@ func (g Grid) EqualOrAbove(p Position) []Position {
 			continue
 		}
 
-		if d := q - h; d >= 0 && d <= 1 {
+		if d := q - h; d <= 1 {
 			result[idx] = n
 			idx++
 		}
@@ -68,62 +81,35 @@ func (g Grid) EqualOrAbove(p Position) []Position {
 
 type Path struct {
 	Position Position
-	Visited  []Position
+	Count    int
 }
 
-func (p Path) Seen(o Position) bool {
-	for _, v := range p.Visited {
-		if v.Equal(o) {
-			return true
-		}
-	}
+func Walk(grid Grid, start, end Position) (Path, bool) {
+	queue := []Path{{Position: start, Count: 0}}
+	seen := make(map[Position]struct{})
 
-	return false
-}
+	for len(queue) > 0 {
+		head := queue[0]
+		queue = queue[1:]
 
-func Walk(grid Grid, start, end Position) []Path {
-	var (
-		result []Path
-		mv     func(Path)
-	)
-
-	mv = func(a Path) {
-		if end.Equal(a.Position) {
-			result = append(result, a)
-			return
+		if end.Equal(head.Position) {
+			return head, true
 		}
 
-		for _, p := range grid.EqualOrAbove(a.Position) {
-			if a.Seen(p) {
-				continue
-			}
-
-			mv(Path{Position: p, Visited: append(a.Visited, a.Position)})
+		if _, ok := seen[head.Position]; ok {
+			continue
 		}
 
+		seen[head.Position] = struct{}{}
+
+		for _, p := range grid.EqualOrAbove(head.Position) {
+			queue = append(queue, Path{Position: p, Count: head.Count + 1})
+		}
+
+		grid[head.Position.Y][head.Position.X] = -1
 	}
 
-	for _, p := range grid.EqualOrAbove(start) {
-		mv(Path{Position: p, Visited: []Position{start}})
-	}
-
-	return result
-}
-
-func Shortest(grid Grid, start, end Position) (int, bool) {
-	pp := Walk(grid, start, end)
-	if len(pp) == 0 {
-		return 0, false
-	}
-
-	a := make([]int, len(pp))
-	for i, p := range pp {
-		a[i] = len(p.Visited)
-	}
-
-	sort.Ints(a)
-
-	return a[0], true
+	return Path{}, false
 }
 
 func Scan(r io.Reader) (Grid, Position, Position) {
@@ -162,6 +148,10 @@ func toNum(r rune) int {
 	return int(r - 'a' + 1)
 }
 
+func toRune(i int) rune {
+	return rune(i + int('a'-1))
+}
+
 func main() {
 	f, err := os.Open(fn)
 	if err != nil {
@@ -171,10 +161,11 @@ func main() {
 	defer f.Close()
 
 	grid, start, end := Scan(f)
-	first, ok := Shortest(grid, start, end)
+	first, ok := Walk(grid, start, end)
 	if !ok {
 		panic("failed to find any paths")
 	}
 
-	fmt.Println("part 1 value: ", first)
+	// fmt.Println(grid)
+	fmt.Println("part 1 value: ", first.Count)
 }
