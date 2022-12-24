@@ -46,7 +46,7 @@ func (g Grid) Height(p Position) (int, bool) {
 	return g[p.Y][p.X], true
 }
 
-func (g Grid) EqualOrAbove(p Position) []Position {
+func (g Grid) EqualOrLower(p Position) []Position {
 	result := make([]Position, 8)
 	var idx int
 
@@ -70,7 +70,7 @@ func (g Grid) EqualOrAbove(p Position) []Position {
 			continue
 		}
 
-		if d := q - h; d <= 1 {
+		if d := q - h; d >= -1 {
 			result[idx] = n
 			idx++
 		}
@@ -79,20 +79,36 @@ func (g Grid) EqualOrAbove(p Position) []Position {
 	return result[:idx]
 }
 
+func (g Grid) FindElevation(r rune) Finished {
+	return func(p Position) bool {
+		got, ok := g.Height(p)
+		if ok {
+			want := toNum(r)
+			if got == want {
+				return true
+			}
+		}
+
+		return false
+	}
+}
+
 type Path struct {
 	Position Position
 	Count    int
 }
 
-func Walk(grid Grid, start, end Position) (Path, bool) {
-	queue := []Path{{Position: start, Count: 0}}
+type Finished func(Position) bool
+
+func Walk(grid Grid, end Position, fin Finished) (Path, bool) {
+	queue := []Path{{Position: end, Count: 0}}
 	seen := make(map[Position]struct{})
 
 	for len(queue) > 0 {
 		head := queue[0]
 		queue = queue[1:]
 
-		if end.Equal(head.Position) {
+		if fin(head.Position) {
 			return head, true
 		}
 
@@ -102,11 +118,9 @@ func Walk(grid Grid, start, end Position) (Path, bool) {
 
 		seen[head.Position] = struct{}{}
 
-		for _, p := range grid.EqualOrAbove(head.Position) {
+		for _, p := range grid.EqualOrLower(head.Position) {
 			queue = append(queue, Path{Position: p, Count: head.Count + 1})
 		}
-
-		grid[head.Position.Y][head.Position.X] = -1
 	}
 
 	return Path{}, false
@@ -161,11 +175,15 @@ func main() {
 	defer f.Close()
 
 	grid, start, end := Scan(f)
-	first, ok := Walk(grid, start, end)
+	first, ok := Walk(grid, end, start.Equal)
 	if !ok {
 		panic("failed to find any paths")
 	}
-
-	// fmt.Println(grid)
 	fmt.Println("part 1 value: ", first.Count)
+
+	second, ok := Walk(grid, end, grid.FindElevation('a'))
+	if !ok {
+		panic("failed to find any paths")
+	}
+	fmt.Println("part 2 value: ", second.Count)
 }
