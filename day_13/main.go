@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 )
 
 var fn = "./day_13/input.txt"
@@ -149,6 +150,68 @@ func (pp Pairs) Sum() int {
 	return result
 }
 
+func (pp Pairs) UnknownsList() UnknownsList {
+	var count int = 0
+	result := make(UnknownsList, len(pp)*2)
+
+	for _, p := range pp {
+		result[count] = *p.Left
+		count++
+		result[count] = *p.Right
+		count++
+	}
+
+	return result
+}
+
+type UnknownsList []Unknown
+
+func (ul UnknownsList) Len() int {
+	return len(ul)
+}
+
+func (ul UnknownsList) Swap(i, j int) {
+	ul[i], ul[j] = ul[j], ul[i]
+}
+
+func (ul UnknownsList) Less(i, j int) bool {
+	if Compare(ul[i], ul[j]) == 1 {
+		return true
+	}
+
+	return false
+}
+
+func (ul UnknownsList) Find(v Unknown) (int, bool) {
+
+	for i, u := range ul {
+		if Compare(u, v) == 0 {
+			return i + 1, true
+		}
+	}
+
+	return 0, false
+}
+
+func DecodeKey(uu UnknownsList) int {
+	lo := Unknown{[]interface{}{float64(2)}}
+	up := Unknown{[]interface{}{float64(6)}}
+	uu = append(uu, lo, up)
+	sort.Sort(uu)
+
+	loi, ok := uu.Find(lo)
+	if !ok {
+		panic("failed to find lower index for decode key")
+	}
+
+	upi, ok := uu.Find(up)
+	if !ok {
+		panic("failed to find upper index for decode key")
+	}
+
+	return loi * upi
+}
+
 func Scan(r io.Reader) Pairs {
 	s := bufio.NewScanner(r)
 
@@ -174,6 +237,8 @@ func Scan(r io.Reader) Pairs {
 		}
 	}
 
+	result = append(result, pair)
+
 	return result
 }
 
@@ -188,4 +253,8 @@ func main() {
 	pp := Scan(f)
 	first := pp.Sum()
 	fmt.Println("part 1 value: ", first)
+
+	uu := pp.UnknownsList()
+	second := DecodeKey(uu)
+	fmt.Println("part 2 value: ", second)
 }
