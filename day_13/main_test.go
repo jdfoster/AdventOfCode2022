@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sort"
 	"strings"
 	"testing"
 )
@@ -118,6 +119,43 @@ func TestMain(t *testing.T) {
 		pp := Scan(r)
 
 		if got, want := pp.Sum(), 13; got != want {
+			t.Errorf("got %d, want %d", got, want)
+		}
+	})
+
+	t.Run("should sort Unknowns", func(t *testing.T) {
+		r := strings.NewReader(input)
+		pp := Scan(r)
+		ul := pp.UnknownsList()
+
+		lower := Unknown{toList(toNumberList(2))}
+		upper := Unknown{toList(toNumberList(6))}
+
+		ul = append(ul, lower)
+		ul = append(ul, upper)
+
+		sort.Sort(ul)
+
+		lowerIndex, ok := ul.Find(lower)
+		if !ok {
+			t.Fatal("failed to find lower index")
+		}
+		upperIndex, ok := ul.Find(upper)
+		if !ok {
+			t.Fatal("failed to find upper index")
+		}
+
+		if got, want := lowerIndex*upperIndex, 140; got != want {
+			t.Errorf("got %d, want %d", got, want)
+		}
+	})
+
+	t.Run("should calculate decode key", func(t *testing.T) {
+		r := strings.NewReader(input)
+		pp := Scan(r)
+		ul := pp.UnknownsList()
+
+		if got, want := DecodeKey(ul), 140; got != want {
 			t.Errorf("got %d, want %d", got, want)
 		}
 	})
