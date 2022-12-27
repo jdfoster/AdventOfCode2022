@@ -18,16 +18,20 @@ var (
 type Grid [][]rune
 
 type Cave struct {
-	xOffset int
-	grid    Grid
+	limits struct {
+		xMin, xMax int
+	}
+	grid Grid
 }
 
 func (c Cave) String() string {
 	b := strings.Builder{}
 
 	for _, row := range c.grid {
-		for _, r := range row {
-			b.WriteRune(r)
+		for i, r := range row {
+			if i > c.limits.xMin && i < c.limits.xMax {
+				b.WriteRune(r)
+			}
 		}
 		b.WriteRune('\n')
 	}
@@ -35,21 +39,12 @@ func (c Cave) String() string {
 	return b.String()
 }
 
-func (c Cave) offset(p Position) Position {
-	return Position{
-		X: p.X - c.xOffset,
-		Y: p.Y,
-	}
-}
-
 func (c Cave) Fill(p Position, r rune) {
-	ap := c.offset(p)
-	c.grid[ap.Y][ap.X] = r
+	c.grid[p.Y][p.X] = r
 }
 
 func (c Cave) Fetch(p Position) rune {
-	o := c.offset(p)
-	return c.grid[o.Y][o.X]
+	return c.grid[p.Y][p.X]
 }
 
 func (c Cave) Draw(a, b Position, r rune) {
@@ -73,11 +68,10 @@ func (c Cave) Count(r rune) int {
 }
 
 func (c Cave) AddSand() bool {
-	cur, nxt := ingress, ingress.Add(0, 1)
+	cur, nxt := ingress, ingress
 
 	ylim := len(c.grid)
-	llim := c.xOffset
-	rLim := len(c.grid[0]) + c.xOffset
+	llim, rLim := 0, len(c.grid[0])
 
 	for {
 		cur, nxt = nxt, nxt.Add(0, 1)
@@ -113,7 +107,11 @@ func (c Cave) AddSand() bool {
 
 func NewCave(rs Rocks) Cave {
 	var result Cave
+
 	xMin, xMax, yMin, yMax := rs.FindBoundry()
+
+	width := 1000
+	height := yMax + 3
 
 	if yMin < 0 {
 		panic("minimum y position less than 0")
@@ -123,19 +121,19 @@ func NewCave(rs Rocks) Cave {
 		panic("x positions do not include start position (x=500)")
 	}
 
-	ly := yMax + 1
+	if xMin < 0 || xMax > width {
+		panic("x positions do not fit within the grid")
+	}
 
-	// add 2 to width to allow gaps either sides
-	result.xOffset = xMin - 1
-	lx := (xMax + 1) - result.xOffset
-
-	result.grid = make(Grid, ly)
+	result.limits.xMin = xMin - 1
+	result.limits.xMax = xMax + 1
+	result.grid = make(Grid, height)
 
 	// fill grid will '.'
-	for y := 0; y < ly; y++ {
-		result.grid[y] = make([]rune, lx)
+	for y := 0; y < height; y++ {
+		result.grid[y] = make([]rune, width)
 
-		for x := 0; x < lx; x++ {
+		for x := 0; x < width; x++ {
 			result.grid[y][x] = '.'
 		}
 	}
@@ -153,7 +151,11 @@ func NewCave(rs Rocks) Cave {
 		}
 	}
 
-	result.Fill(ingress, '+')
+	// add ingress
+	// result.Fill(ingress, '+')
+
+	// add floor
+	result.Draw(Position{X: 0, Y: height - 1}, Position{X: width - 1, Y: height - 1}, '#')
 
 	return result
 }
