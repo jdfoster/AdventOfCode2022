@@ -82,7 +82,7 @@ func TestMain(t *testing.T) {
 
 			var count int
 			for i := 0; i < 100; i++ {
-				if cave.AddSand() {
+				if cave.AddSand(-2) {
 					count++
 				}
 			}
