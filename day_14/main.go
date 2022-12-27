@@ -67,7 +67,7 @@ func (c Cave) Count(r rune) int {
 	return result
 }
 
-func (c Cave) AddSand() bool {
+func (c Cave) AddSand(offset int) bool {
 	cur, nxt := ingress, ingress
 
 	ylim := len(c.grid)
@@ -76,7 +76,7 @@ func (c Cave) AddSand() bool {
 	for {
 		cur, nxt = nxt, nxt.Add(0, 1)
 
-		if nxt.Y >= ylim || nxt.X <= llim || nxt.X >= rLim {
+		if nxt.Y >= ylim+offset || nxt.X <= llim || nxt.X >= rLim {
 			return false
 		}
 
@@ -97,7 +97,7 @@ func (c Cave) AddSand() bool {
 		}
 	}
 
-	if p := c.Fetch(cur); p == '.' {
+	if p := c.Fetch(cur); p == '.' || p == '+' {
 		c.Fill(cur, 'o')
 		return true
 	}
@@ -152,7 +152,7 @@ func NewCave(rs Rocks) Cave {
 	}
 
 	// add ingress
-	// result.Fill(ingress, '+')
+	result.Fill(ingress, '+')
 
 	// add floor
 	result.Draw(Position{X: 0, Y: height - 1}, Position{X: width - 1, Y: height - 1}, '#')
@@ -302,15 +302,23 @@ func main() {
 
 	defer f.Close()
 
-	rs := Scan(f)
-	cave := NewCave(rs)
+	rocks := Scan(f)
 
-	for cave.AddSand() {
+	cave := NewCave(rocks)
+	for cave.AddSand(-2) {
 		// loop to false
 	}
 
 	fmt.Println(cave)
-
 	first := cave.Count('o')
 	fmt.Println("part 1 value: ", first)
+
+	cave = NewCave(rocks)
+	for cave.AddSand(0) {
+		// loop to false
+	}
+
+	fmt.Println(cave)
+	second := cave.Count('o')
+	fmt.Println("part 2 value: ", second)
 }
