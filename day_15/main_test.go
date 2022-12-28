@@ -88,9 +88,9 @@ func TestMain(t *testing.T) {
 		t.Run("should build and count characters", func(t *testing.T) {
 			r := strings.NewReader(input)
 			locs := Scan(r)
-			radar := NewRadar(locs)
+			radar := NewRadar(10, locs)
 
-			if got, want := radar.CountRow(10, '#'), 26; got != want {
+			if got, want := radar.CountChar('#'), 26; got != want {
 				fmt.Println(radar)
 				t.Errorf("got %d, want %d", got, want)
 			}

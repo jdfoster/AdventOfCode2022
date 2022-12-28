@@ -13,48 +13,36 @@ import (
 
 var fn = "./day_15/input.txt"
 
-type Grid [][]rune
+type Line []rune
 
 type Radar struct {
-	grid    Grid
-	xOffset int
-	yOffset int
+	line   Line
+	offset int
 }
 
 func (r Radar) String() string {
 	b := strings.Builder{}
 
-	for _, row := range r.grid {
-		for _, s := range row {
-			b.WriteRune(s)
-		}
-
-		b.WriteRune('\n')
+	for _, s := range r.line {
+		b.WriteRune(s)
 	}
 
 	return b.String()
 }
 
-func (r Radar) offset(p Position) (int, int) {
-	return p.X - r.xOffset, p.Y - r.yOffset
+func (r Radar) Fill(x int, s rune) {
+	ax := x - r.offset
+	r.line[ax] = s
 }
 
-func (r Radar) Fill(p Position, s rune) {
-	x, y := r.offset(p)
-	r.grid[y][x] = s
+func (r Radar) Fetch(x int) rune {
+	return r.line[x]
 }
 
-func (r Radar) Fetch(p Position) rune {
-	x, y := r.offset(p)
-	return r.grid[y][x]
-}
-
-func (r Radar) CountRow(y int, s rune) int {
+func (r Radar) CountChar(s rune) int {
 	var result int
 
-	cy := y - r.yOffset
-
-	for _, o := range r.grid[cy] {
+	for _, o := range r.line {
 		if o == s {
 			result++
 		}
@@ -63,35 +51,39 @@ func (r Radar) CountRow(y int, s rune) int {
 	return result
 }
 
-func NewRadar(ll Locations) Radar {
+func NewRadar(y int, ll Locations) Radar {
 	var result Radar
 
-	xMin, xMax, yMin, yMax := ll.Boundaries()
-
-	result.xOffset = (xMin - 1)
+	xMin, xMax := ll.Boundaries()
+	result.offset = (xMin - 1)
 	width := (xMax - xMin) + 2
 
-	result.yOffset = (yMin - 1)
-	height := (yMax - yMin) + 2
+	result.line = make([]rune, width)
 
-	result.grid = make([][]rune, height)
-
-	for i := 0; i < height; i++ {
-		result.grid[i] = make([]rune, width)
-
-		// fill grid
-		for j := 0; j < width; j++ {
-			result.grid[i][j] = '.'
-		}
+	// fill grid
+	for j := 0; j < width; j++ {
+		result.line[j] = '.'
 	}
 
 	for _, l := range ll {
-		result.Fill(l.Sensor, 'S')
-		result.Fill(l.Beacon, 'B')
+		for i := 0; i < width; i++ {
+			x := i + result.offset
+			p := Position{X: x, Y: y}
 
-		for _, p := range l.Dilate() {
-			if result.Fetch(p) == '.' {
-				result.Fill(p, '#')
+			if l.Sensor.Equal(p) {
+				result.Fill(x, 'S')
+				continue
+			}
+
+			if l.Beacon.Equal(p) {
+				result.Fill(x, 'B')
+				continue
+			}
+
+			d := l.Sensor.Distance(p)
+
+			if d <= l.Distance() {
+				result.Fill(x, '#')
 			}
 		}
 	}
@@ -101,6 +93,10 @@ func NewRadar(ll Locations) Radar {
 
 type Position struct {
 	X, Y int
+}
+
+func (p Position) Equal(o Position) bool {
+	return p.X == o.X && p.Y == o.Y
 }
 
 func (p Position) Add(x, y int) Position {
@@ -166,9 +162,8 @@ func NewLocation(cc []int) Location {
 
 type Locations []Location
 
-func (ll Locations) Boundaries() (xMin, xMax, yMin, yMax int) {
+func (ll Locations) Boundaries() (xMin, xMax int) {
 	xMin, xMax = math.MaxInt, math.MinInt
-	yMin, yMax = math.MaxInt, math.MinInt
 
 	for _, l := range ll {
 		d := l.Distance()
@@ -179,12 +174,6 @@ func (ll Locations) Boundaries() (xMin, xMax, yMin, yMax int) {
 		if x := l.Sensor.X + d; x > xMax {
 			xMax = x
 		}
-		if y := l.Sensor.Y - d; y < yMin {
-			yMin = y
-		}
-		if y := l.Sensor.Y + d; y > yMax {
-			yMax = y
-		}
 
 		if l.Beacon.X < xMin {
 			xMin = l.Beacon.X
@@ -192,13 +181,6 @@ func (ll Locations) Boundaries() (xMin, xMax, yMin, yMax int) {
 		if l.Beacon.X > xMax {
 			xMax = l.Beacon.X
 		}
-		if l.Beacon.Y < yMin {
-			yMin = l.Beacon.Y
-		}
-		if l.Beacon.Y > yMax {
-			yMax = l.Beacon.Y
-		}
-
 	}
 
 	return
@@ -241,8 +223,7 @@ func main() {
 	defer f.Close()
 
 	locs := Scan(f)
-	radar := NewRadar(locs)
-
-	first := radar.CountRow(2_000_000, '#')
+	radar := NewRadar(2_000_000, locs)
+	first := radar.CountChar('#')
 	fmt.Println("part 1 value: ", first)
 }
