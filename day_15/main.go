@@ -7,11 +7,17 @@ import (
 	"math"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
 
 var fn = "./day_15/input.txt"
+
+type Point struct {
+	position Position
+	distance int
+}
 
 type Line []rune
 
@@ -51,13 +57,32 @@ func (r Radar) CountChar(s rune) int {
 	return result
 }
 
-func NewRadar(y int, ll Locations) Radar {
+func (r Radar) TrimChar(s, k rune) {
+	ll := len(r.line)
+
+	for i := 0; i < ll; i++ {
+		if r.line[i] == s {
+			r.line[i] = k
+			continue
+		}
+
+		break
+	}
+
+	for i := ll - 1; i > 0; i-- {
+		if r.line[i] == s {
+			r.line[i] = k
+			continue
+		}
+
+		break
+	}
+}
+
+func BuildLine(y, offset, width int, ll Locations) Radar {
 	var result Radar
 
-	xMin, xMax := ll.Boundaries()
-	result.offset = (xMin - 1)
-	width := (xMax - xMin) + 2
-
+	result.offset = offset
 	result.line = make([]rune, width)
 
 	// fill grid
@@ -88,7 +113,91 @@ func NewRadar(y int, ll Locations) Radar {
 		}
 	}
 
+	result.TrimChar('.', '0')
+
 	return result
+}
+
+func ScanLine(y int, ll Locations) Radar {
+	min, max := ll.Boundaries()
+	return BuildLine(y, min, max-min, ll)
+}
+
+type Intersect struct{ X, Dir int }
+
+type Intersects []Intersect
+
+func (ii Intersects) Len() int {
+	return len(ii)
+}
+
+func (ii Intersects) Swap(i, j int) {
+	ii[i], ii[j] = ii[j], ii[i]
+}
+
+func (ii Intersects) Less(i, j int) bool {
+	a, b := ii[i], ii[j]
+
+	if a.X < b.X {
+		return true
+	}
+
+	if a.X == b.X && a.Dir < b.Dir {
+		return true
+	}
+
+	return false
+}
+
+func ScanGrid(max int, ll Locations) Position {
+	// algorithm adapted from https://github.com/elizarov/AdventOfCode2022/blob/main/src/Day15.kt
+
+	var result Position
+
+loop:
+	for i := 0; i < max; i++ {
+		points := make(Intersects, 0, len(ll)*2)
+
+		for _, l := range ll {
+			d := l.Distance()
+			v := AbsInt(i - l.Sensor.Y)
+
+			if v <= d {
+				w := d - v
+				left, right := l.Sensor.X-w, l.Sensor.X+w+1
+				points = append(points, Intersect{X: left, Dir: 1})
+				points = append(points, Intersect{X: right, Dir: -1})
+			}
+		}
+
+		sort.Sort(points)
+
+		var (
+			px    int
+			count int
+		)
+
+		px = points[1].X
+		for j, v := range points {
+			if v.X > px {
+				if count == 0 && px > 0 && px < max {
+					result.X = px
+					result.Y = i
+					break loop
+				}
+
+				px = points[j].X
+			}
+
+			count += v.Dir
+		}
+	}
+
+	return result
+}
+
+func CalcFequency(max int, p Position) int {
+	return p.X*max + p.Y
 }
 
 type Position struct {
@@ -113,25 +222,6 @@ func (p Position) Distance(o Position) int {
 	return AbsInt(dx) + AbsInt(dy)
 }
 
-func (p Position) Dilate(o Position) []Position {
-	var result []Position
-
-	d := p.Distance(o)
-	ori := p.Add(-1*d, -1*d)
-
-	for y := 0; y < d*2; y++ {
-		for x := 0; x < d*2; x++ {
-			cc := ori.Add(x, y)
-
-			if pd := p.Distance(cc); pd <= d {
-				result = append(result, cc)
-			}
-		}
-	}
-
-	return result
-}
-
 func AbsInt(a int) int {
 	if a < 0 {
 		return a * -1
@@ -147,10 +237,6 @@ type Location struct {
 
 func (l Location) Distance() int {
 	return l.Sensor.Distance(l.Beacon)
-}
-
-func (l Location) Dilate() []Position {
-	return l.Sensor.Dilate(l.Beacon)
 }
 
 func NewLocation(cc []int) Location {
@@ -223,7 +309,13 @@ func main() {
 	defer f.Close()
 
 	locs := Scan(f)
-	radar := NewRadar(2_000_000, locs)
-	first := radar.CountChar('#')
+
+	line := ScanLine(2_000_000, locs)
+	first := line.CountChar('#')
 	fmt.Println("part 1 value: ", first)
+
+	max := 4_000_000
+	pos := ScanGrid(max, locs)
+	second := CalcFequency(max, pos)
+	fmt.Println("part 2 value: ", second)
 }

@@ -44,24 +44,20 @@ func TestMain(t *testing.T) {
 	t.Run("Position", func(t *testing.T) {
 		origin := Position{X: 0, Y: 0}
 		cases := []struct {
-			p  Position
-			d  int
-			ll int
+			p Position
+			d int
 		}{
 			{
-				p:  Position{X: 6, Y: 6},
-				d:  12,
-				ll: 311,
+				p: Position{X: 6, Y: 6},
+				d: 12,
 			},
 			{
-				p:  Position{X: 3, Y: 3},
-				d:  6,
-				ll: 83,
+				p: Position{X: 3, Y: 3},
+				d: 6,
 			},
 			{
-				p:  Position{X: 2, Y: 2},
-				d:  4,
-				ll: 39,
+				p: Position{X: 2, Y: 2},
+				d: 4,
 			},
 		}
 
@@ -72,26 +68,39 @@ func TestMain(t *testing.T) {
 				}
 			}
 		})
-
-		t.Run("dilate should list point within distance", func(t *testing.T) {
-			for _, c := range cases {
-				ll := origin.Dilate(c.p)
-
-				if got, want := len(ll), c.ll; got != want {
-					t.Errorf("got %d, want %d", got, want)
-				}
-			}
-		})
 	})
 
 	t.Run("Radar", func(t *testing.T) {
 		t.Run("should build and count characters", func(t *testing.T) {
 			r := strings.NewReader(input)
 			locs := Scan(r)
-			radar := NewRadar(10, locs)
+			line := ScanLine(10, locs)
 
-			if got, want := radar.CountChar('#'), 26; got != want {
-				fmt.Println(radar)
+			if got, want := line.CountChar('#'), 26; got != want {
+				fmt.Println(line)
+				t.Errorf("got %d, want %d", got, want)
+			}
+		})
+
+		t.Run("should find empty block", func(t *testing.T) {
+			want := Position{X: 14, Y: 11}
+
+			r := strings.NewReader(input)
+			locs := Scan(r)
+			got := ScanGrid(20, locs)
+
+			if !want.Equal(got) {
+				t.Errorf("x: got %d, want %d", got.X, want.X)
+				t.Errorf("y: got %d, want %d", got.Y, want.Y)
+			}
+		})
+
+		t.Run("should calculate frequency", func(t *testing.T) {
+			r := strings.NewReader(input)
+			locs := Scan(r)
+			pos := ScanGrid(20, locs)
+
+			if got, want := CalcFequency(4000000, pos), 56000011; got != want {
 				t.Errorf("got %d, want %d", got, want)
 			}
 		})
