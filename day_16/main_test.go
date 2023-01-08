@@ -15,69 +15,16 @@ func TestMain(t *testing.T) {
 		}
 
 		for _, want := range details {
-			got := res[want.Name]
+			got := res[want.ID]
 			CompaeValueMeta(t, got, want)
 		}
-	})
-
-	t.Run("should build root", func(t *testing.T) {
-		r := strings.NewReader(input)
-		d := Scan(r)
-		vv := d.Build("AA")
-
-		test := []string{"DD", "II", "BB"}
-
-		for i, v := range vv.Tunnel {
-			tc := test[i]
-
-			if got, want := v.Name, tc; got != want {
-				t.Errorf("got %q, want %q", got, want)
-			}
-		}
-	})
-
-	t.Run("should record open values", func(t *testing.T) {
-		r := strings.NewReader(input)
-		d := Scan(r)
-		w := &Walker{Current: d.Build("AA")}
-
-		mv := func(n string) {
-			if !w.Move(n) {
-				t.Errorf("failed to move to value %q", n)
-			}
-		}
-
-		isp := func(rate int, open bool) {
-			r, o := w.Inspect()
-
-			if got, want := r, rate; got != want {
-				t.Errorf("got %d, want %d", got, want)
-			}
-
-			if got, want := o, open; got != want {
-				t.Errorf("got %t, want %t", got, want)
-			}
-		}
-
-		isp(0, true)
-
-		mv("DD")
-		isp(20, true)
-		w.Open()
-		isp(20, false)
-
-		mv("CC")
-		isp(2, true)
-		w.Open()
-		isp(2, false)
 	})
 
 	t.Run("should walk to find maximum flow", func(t *testing.T) {
 		r := strings.NewReader(input)
 		d := Scan(r)
-		g := d.Build("AA")
 
-		if got, want := Walk(g, 30), 1651; got != want {
+		if got, want := Walk(30, d), 1651; got != want {
 			t.Errorf("got %d, want %d", got, want)
 		}
 	})
@@ -107,51 +54,61 @@ func CompaeValueMeta(t *testing.T, a, b ValueDetail) {
 
 var details = []ValueDetail{
 	{
+		ID:       0,
 		Name:     "AA",
 		FlowRate: 0,
 		Values:   []string{"DD", "II", "BB"},
 	},
 	{
+		ID:       1,
 		Name:     "BB",
 		FlowRate: 13,
 		Values:   []string{"CC", "AA"},
 	},
 	{
+		ID:       2,
 		Name:     "CC",
 		FlowRate: 2,
 		Values:   []string{"DD", "BB"},
 	},
 	{
+		ID:       3,
 		Name:     "DD",
 		FlowRate: 20,
 		Values:   []string{"CC", "AA", "EE"},
 	},
 	{
+		ID:       4,
 		Name:     "EE",
 		FlowRate: 3,
 		Values:   []string{"FF", "DD"},
 	},
 	{
+		ID:       5,
 		Name:     "FF",
 		FlowRate: 0,
 		Values:   []string{"EE", "GG"},
 	},
 	{
+		ID:       6,
 		Name:     "GG",
 		FlowRate: 0,
 		Values:   []string{"FF", "HH"},
 	},
 	{
+		ID:       7,
 		Name:     "HH",
 		FlowRate: 22,
 		Values:   []string{"GG"},
 	},
 	{
+		ID:       8,
 		Name:     "II",
 		FlowRate: 0,
 		Values:   []string{"AA", "JJ"},
 	},
 	{
+		ID:       9,
 		Name:     "JJ",
 		FlowRate: 21,
 		Values:   []string{"II"},
