@@ -13,73 +13,93 @@ import (
 
 var fn = "./day_16/input.txt"
 
-type Walker struct {
-	Current *Valve
-	VState  uint
+type Cursor struct {
+	Position uint
+	State    uint
 }
 
-func (w Walker) Copy() *Walker {
-	return &Walker{
-		Current: w.Current,
-		VState:  w.VState,
+func (c Cursor) IsClosed() bool {
+	var mask uint = 1 << c.Position
+	return (c.State & mask) == 0
+}
+
+func (c Cursor) Open() Cursor {
+	var mask uint = 1 << c.Position
+	c.State = c.State | mask
+	return c
+}
+
+func (c Cursor) Move(id uint) Cursor {
+	c.Position = id
+	return c
+}
+
+type CursorFlow map[Cursor]int
+
+type TimeCursorFlow []CursorFlow
+
+func (tt TimeCursorFlow) Put(step int, cursor Cursor, flow int) {
+	current, ok := tt[step][cursor]
+
+	if !ok || flow > current {
+		tt[step][cursor] = flow
 	}
 }
 
-func (w Walker) Inspect() (int, bool) {
-	var mask uint = 1 << w.Current.ID
-	open := (w.VState & mask) == 0
-	return w.Current.FlowRate, open
+func NewTimeCursorFlow(steps int, valves ValueDetailsByID) TimeCursorFlow {
+	var (
+		r int
+		m int
+	)
+
+	for _, valve := range valves {
+		if valve.FlowRate > 0 {
+			r++
+		}
+
+		m += len(valve.Values)
+	}
+
+	count := int(math.Pow(2, float64(r))) * m
+	res := make(TimeCursorFlow, steps+1)
+
+	for i := 0; i < steps+1; i++ {
+		res[i] = make(CursorFlow, count)
+	}
+
+	return res
 }
 
-func (w *Walker) Open() {
-	var mask uint = 1 << w.Current.ID
-	w.VState = w.VState | mask
-}
+func Walk(dur int, details ValueDetailsByID) int {
+	var root uint = math.MaxUint
 
-func (w *Walker) Move(name string) bool {
-	for i := 0; i < len(w.Current.Tunnel); i++ {
-		nxt := w.Current.Tunnel[i]
-		if nxt.Name == name {
-			w.Current = nxt
-			return true
+	for id, detail := range details {
+		if detail.Name == "AA" {
+			root = id
 		}
 	}
 
-	return false
-}
-
-type Records map[Walker]int
-
-func Walk(graph *Valve, dur int) int {
-	steps := make([]Records, dur+1)
-	for i := 0; i < len(steps); i++ {
-		steps[i] = make(Records)
+	if root == math.MaxUint {
+		panic("failed to find root valve \"AA\"")
 	}
 
-	put := func(t int, w Walker, p int) {
-		if cur, ok := steps[t][w]; !ok || p > cur {
-			steps[t][w] = p
-		}
-	}
-
-	put(0, Walker{Current: graph}, 0)
+	steps := NewTimeCursorFlow(dur, details)
+	steps.Put(0, Cursor{Position: root}, 0)
 
 	for i := 0; i < dur; i++ {
 		step := steps[i]
 		fmt.Printf("time: %02d; count: %d\n", i, len(step))
 
-		for k, v := range step {
-			if r, ok := k.Inspect(); ok {
-				k.Open()
-				auc := (dur - i - 1) * r
-				put(i+1, k, v+auc)
+		for cursor, flow := range step {
+			current := details[cursor.Position]
+
+			if cursor.IsClosed() && current.FlowRate > 0 {
+				auc := (dur - i - 1) * current.FlowRate
+				steps.Put(i+1, cursor.Open(), flow+auc)
 			}
 
-			for _, t := range k.Current.Tunnel {
-				w := k.Copy()
-				if w.Move(t.Name) {
-					put(i+1, *w, v)
-				}
+			for _, id := range current.Tunnels {
+				steps.Put(i+1, cursor.Move(id), flow)
 			}
 		}
 	}
@@ -96,70 +116,22 @@ func Walk(graph *Valve, dur int) int {
 	return max
 }
 
-type Valve struct {
-	ID       uint
-	Name     string
-	Tunnel   []*Valve
-	FlowRate int
-}
-
 type ValueDetail struct {
 	ID       uint
 	Name     string
 	FlowRate int
 	Values   []string
+	Tunnels  []uint
 }
 
-type ValueDetails map[string]ValueDetail
+type ValueDetailsByID map[uint]ValueDetail
 
-func (dd ValueDetails) Build(root string) *Valve {
-	pts := make(map[string]*Valve, len(dd))
-
-	for k, v := range dd {
-		pts[k] = &Valve{
-			ID:       v.ID,
-			Name:     v.Name,
-			FlowRate: v.FlowRate,
-		}
-	}
-
-	link := func(parent string, children []string) {
-		tunnels := make([]*Valve, len(children))
-
-		for i, child := range children {
-			v, ok := pts[child]
-			if !ok {
-				panic("failed to find child valve :" + child)
-			}
-
-			tunnels[i] = v
-		}
-
-		p, ok := pts[parent]
-		if !ok {
-			panic("failed to find parent value :" + parent)
-		}
-
-		p.Tunnel = tunnels
-	}
-
-	for k, v := range dd {
-		link(k, v.Values)
-	}
-
-	r, ok := pts[root]
-	if !ok {
-		panic("failed to find root value :" + root)
-	}
-
-	return r
-}
-
-func Scan(r io.Reader) ValueDetails {
+func Scan(r io.Reader) ValueDetailsByID {
 	re := regexp.MustCompile(`Valve (\w+) has flow rate=(\d+); tunnels? leads? to valves? (.+)`)
 	s := bufio.NewScanner(r)
 
-	results := make(map[string]ValueDetail)
+	results := make(map[uint]ValueDetail)
+	lookup := make(map[string]uint)
 
 	var id uint
 	for s.Scan() {
@@ -182,14 +154,25 @@ func Scan(r io.Reader) ValueDetails {
 		}
 
 		meta.Values = strings.Split(mm[0][3], ",")
+		meta.Tunnels = make([]uint, len(meta.Values))
 
 		for i := 1; i < len(meta.Values); i++ {
 			meta.Values[i] = strings.TrimSpace(meta.Values[i])
 		}
 
-		results[meta.Name] = meta
+		lookup[meta.Name] = meta.ID
+		results[meta.ID] = meta
 
 		id++
+	}
+
+	// update tunnels to use IDs
+	for k, v := range results {
+		for i, name := range v.Values {
+			v.Tunnels[i] = lookup[name]
+		}
+
+		results[k] = v
 	}
 
 	return results
@@ -204,8 +187,6 @@ func main() {
 	defer f.Close()
 
 	d := Scan(f)
-	g := d.Build("AA")
-	first := Walk(g, 30)
-
+	first := Walk(30, d)
 	fmt.Println("part 1 value: ", first)
 }
